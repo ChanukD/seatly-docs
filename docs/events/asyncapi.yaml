@@ -1,0 +1,193 @@
+asyncapi: 3.1.0
+info:
+  title: Seatly domain events
+  version: 0.1.0
+  description: Kafka topics and payloads. Published through each service's outbox (at-least-once).
+
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: Docker Compose Kafka
+
+defaultContentType: application/json
+
+channels:
+  seatStatus:
+    address: seat.status
+    description: Seat state changes for an event. Key = eventId.
+    messages:
+      seatHeld:
+        $ref: '#/components/messages/SeatHeld'
+      seatReleased:
+        $ref: '#/components/messages/SeatReleased'
+      seatStatusChanged:
+        $ref: '#/components/messages/SeatStatusChanged'
+  orderLifecycle:
+    address: order.lifecycle
+    description: Order saga events. Key = orderId.
+    messages:
+      orderCreated:
+        $ref: '#/components/messages/OrderCreated'
+      orderConfirmed:
+        $ref: '#/components/messages/OrderConfirmed'
+      orderCancelled:
+        $ref: '#/components/messages/OrderCancelled'
+  paymentResult:
+    address: payment.result
+    description: Payment outcomes. Key = orderId.
+    messages:
+      paymentSucceeded:
+        $ref: '#/components/messages/PaymentSucceeded'
+      paymentFailed:
+        $ref: '#/components/messages/PaymentFailed'
+
+operations:
+  publishSeatStatus:
+    action: send
+    summary: booking-service publishes seat changes
+    channel:
+      $ref: '#/channels/seatStatus'
+  publishOrderLifecycle:
+    action: send
+    summary: order-service publishes saga events
+    channel:
+      $ref: '#/channels/orderLifecycle'
+  publishPaymentResult:
+    action: send
+    summary: payment-service publishes payment outcomes
+    channel:
+      $ref: '#/channels/paymentResult'
+
+components:
+  messages:
+    SeatHeld:
+      name: seat.held
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - $ref: '#/components/schemas/SeatChange'
+    SeatReleased:
+      name: seat.released
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - $ref: '#/components/schemas/SeatChange'
+    SeatStatusChanged:
+      name: seat.status-changed
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - $ref: '#/components/schemas/SeatChange'
+    OrderCreated:
+      name: order.created
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - $ref: '#/components/schemas/OrderPayload'
+    OrderConfirmed:
+      name: order.confirmed
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - $ref: '#/components/schemas/OrderPayload'
+    OrderCancelled:
+      name: order.cancelled
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - $ref: '#/components/schemas/OrderPayload'
+          - type: object
+            required: [reason]
+            properties:
+              reason:
+                type: string
+                enum: [PAYMENT_FAILED, HOLD_EXPIRED, USER_CANCELLED, EVENT_CANCELLED]
+    PaymentSucceeded:
+      name: payment.succeeded
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - $ref: '#/components/schemas/PaymentPayload'
+    PaymentFailed:
+      name: payment.failed
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - $ref: '#/components/schemas/PaymentPayload'
+          - type: object
+            required: [failureCode]
+            properties:
+              failureCode:
+                type: string
+                enum: [DECLINED, TIMEOUT, CIRCUIT_OPEN, GATEWAY_ERROR]
+
+  schemas:
+    Envelope:
+      type: object
+      required: [eventId, eventType, occurredAt, aggregateId]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique per message; consumers dedupe on it (processed_events)
+        eventType:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        aggregateId:
+          type: string
+        traceparent:
+          type: string
+          description: W3C trace context, so one trace spans producer and consumers
+    SeatChange:
+      type: object
+      required: [eventRef, seatIds, status]
+      properties:
+        eventRef:
+          type: string
+          format: uuid
+          description: The concert/conference id (named eventRef to avoid clashing with eventId)
+        seatIds:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [AVAILABLE, HELD, BOOKED]
+        holdId:
+          type: string
+          format: uuid
+    OrderPayload:
+      type: object
+      required: [orderId, userId, holdId, total, currency]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+        holdId:
+          type: string
+          format: uuid
+        total:
+          type: string
+          description: Decimal as string to avoid float rounding
+        currency:
+          type: string
+          const: SGD
+    PaymentPayload:
+      type: object
+      required: [paymentId, orderId, amount]
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        amount:
+          type: string
+        attempts:
+          type: integer

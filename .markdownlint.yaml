@@ -1,0 +1,10 @@
+default: true
+MD013: false        # line length: tables and links make this noisy
+MD033: false        # inline HTML (<br/> in Mermaid labels)
+MD024:
+  siblings_only: true
+MD046:
+  style: fenced
+MD007:
+  indent: 4         # MkDocs needs 4-space nested lists
+MD060: false        # table pipe alignment: too noisy for hand-written tables

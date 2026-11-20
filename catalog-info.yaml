@@ -1,0 +1,37 @@
+# Backstage software catalog entry (Phase 9). TechDocs builds from mkdocs.yml in this repo.
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: seatly
+  title: Seatly
+  description: Event ticket booking platform (learning lab)
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+spec:
+  owner: chanuka
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: booking-api
+  description: Seat holds
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: chanuka
+  system: seatly
+  definition:
+    $text: ./docs/api/booking-service.openapi.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: seatly-events
+  description: Kafka domain events
+spec:
+  type: asyncapi
+  lifecycle: experimental
+  owner: chanuka
+  system: seatly
+  definition:
+    $text: ./docs/events/asyncapi.yaml

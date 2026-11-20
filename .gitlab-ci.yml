@@ -1,0 +1,84 @@
+# Seatly – root pipeline.
+# Docs + contracts + secret scanning now; per-service jobs get added under `include:` as services land
+# (use rules:changes per service folder, see ADR-0001).
+
+stages:
+  - lint
+  - security
+  - build
+  - deploy
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+.docs-changes: &docs-changes
+  changes:
+    - docs/**/*
+    - mkdocs.yml
+    - requirements-docs.txt
+    - .markdownlint.yaml
+
+lint:markdown:
+  stage: lint
+  image: node:22-alpine
+  rules:
+    - <<: *docs-changes
+  script:
+    - npx --yes markdownlint-cli2 "docs/**/*.md" "README.md"
+
+lint:openapi:
+  stage: lint
+  image: node:22-alpine
+  rules:
+    - changes: [docs/api/**/*]
+  script:
+    - npx --yes @redocly/cli@latest lint docs/api/*.openapi.yaml
+
+lint:asyncapi:
+  stage: lint
+  image: node:22-alpine
+  rules:
+    - changes: [docs/events/**/*]
+  script:
+    - npx --yes @asyncapi/cli@latest validate docs/events/asyncapi.yaml
+
+security:gitleaks:
+  stage: security
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  script:
+    - gitleaks detect --source . --redact --verbose
+
+docs:build:
+  stage: build
+  image: python:3.12-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      <<: *docs-changes
+  cache:
+    paths: [.cache/pip]
+  script:
+    - pip install -r requirements-docs.txt
+    - mkdocs build --strict --site-dir site
+
+# GitLab Pages: the job must be named `pages` and publish `public/`.
+pages:
+  stage: deploy
+  image: python:3.12-slim
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      <<: *docs-changes
+  cache:
+    paths: [.cache/pip]
+  script:
+    - pip install -r requirements-docs.txt
+    - mkdocs build --strict --site-dir public
+  artifacts:
+    paths: [public]

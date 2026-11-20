@@ -1,0 +1,45 @@
+# Docs
+site/
+public/
+.venv/
+.cache/
+
+# Java
+target/
+build/
+.gradle/
+*.class
+
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+# Keep .terraform.lock.hcl committed
+
+# Secrets – never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kubeconfig*
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store

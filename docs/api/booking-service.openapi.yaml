@@ -1,0 +1,169 @@
+openapi: 3.1.0
+info:
+  title: Seatly booking-service
+  version: 0.1.0
+  description: Seat holds for events. All-or-nothing, 10-minute TTL.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://api.seatly.local
+    description: Local (through the gateway)
+security:
+  - bearerAuth: []
+tags:
+  - name: holds
+    description: Temporary seat reservations
+paths:
+  /holds:
+    post:
+      tags: [holds]
+      operationId: createHold
+      summary: Hold one or more seats for 10 minutes
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHoldRequest'
+      responses:
+        '201':
+          description: Seats held. A retried request with the same Idempotency-Key returns the same hold.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hold'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: No valid waiting-room access token for a hot event
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: One or more seats are not available. No seats were held.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+  /holds/{holdId}:
+    parameters:
+      - name: holdId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [holds]
+      operationId: getHold
+      summary: Get a hold
+      responses:
+        '200':
+          description: The hold
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hold'
+        '404':
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [holds]
+      operationId: releaseHold
+      summary: Release a hold before it expires
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '204':
+          description: Released (also returned if it was already released or expired)
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: Hold is already part of a confirmed order
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated UUID. Same key + same body returns the original result.
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: Error (RFC 9457 Problem Details)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    CreateHoldRequest:
+      type: object
+      required: [eventId, seatIds]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        seatIds:
+          type: array
+          minItems: 1
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+    Hold:
+      type: object
+      required: [id, eventId, seatIds, status, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        seatIds:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [ACTIVE, RELEASED, EXPIRED, CONVERTED]
+        expiresAt:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        unavailableSeatIds:
+          type: array
+          items:
+            type: string
+          description: Extension member, set on 409

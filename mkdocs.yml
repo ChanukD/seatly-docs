@@ -1,0 +1,77 @@
+site_name: Seatly
+site_description: Event ticket booking platform — design docs, ADRs and experiments
+repo_name: seatly
+edit_uri: ""
+docs_dir: docs
+strict: true
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - System design: architecture/system-design.md
+      - C4 – System context: architecture/c4/context.md
+      - C4 – Containers: architecture/c4/containers.md
+      - Flow – Seat hold: architecture/sequence/seat-hold.md
+      - Flow – Booking saga: architecture/sequence/booking-saga.md
+      - Flow – Flash-sale waiting room: architecture/sequence/waiting-room.md
+  - Decisions (ADRs):
+      - adr/README.md
+      - "0001 Monorepo": adr/0001-monorepo.md
+      - "0002 Seat locking strategy": adr/0002-seat-locking-strategy.md
+      - "0003 Transactional outbox": adr/0003-transactional-outbox.md
+      - "0004 Saga style": adr/0004-saga-style.md
+      - "0005 GitLab CI + Argo CD": adr/0005-gitlab-ci-argocd.md
+      - "0006 Identity provider": adr/0006-identity-provider.md
+      - Template: adr/template.md
+  - Contracts:
+      - API (OpenAPI): api/README.md
+      - Events (AsyncAPI): events/README.md
+  - Experiments:
+      - experiments/README.md
+      - "EXP-001 Seat locking": experiments/EXP-001-seat-locking.md
+      - Template: experiments/template.md
+  - Operations:
+      - Runbook template: runbooks/template.md
+      - Postmortem template: postmortems/template.md

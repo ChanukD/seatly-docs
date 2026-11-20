@@ -1,0 +1,17 @@
+# Replace @your-gitlab-username with your GitLab username.
+# Owners are asked to review MRs that touch these paths.
+
+*                       @your-gitlab-username
+
+[Architecture]
+/docs/adr/              @your-gitlab-username
+/docs/architecture/     @your-gitlab-username
+
+[Contracts]
+/docs/api/              @your-gitlab-username
+/docs/events/           @your-gitlab-username
+
+[Infrastructure]
+/infra/                 @your-gitlab-username
+/deploy/                @your-gitlab-username
+/platform/              @your-gitlab-username
