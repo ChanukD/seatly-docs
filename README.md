@@ -9,17 +9,17 @@ maps to a pattern to test, and every experiment starts with a written hypothesis
 
 ## Architecture at a glance
 
-```mermaid
-flowchart LR
-    U[Browser] --> CF[CloudFront<br/>React app]
-    U --> ALB[ALB] --> GW[Spring Cloud Gateway<br/>Cognito JWT, rate limit]
-    GW --> SVC[Java / Python / Node services<br/>on EKS]
-    SVC --> PG[(RDS PostgreSQL<br/>schema per service)]
-    SVC --> RD[(ElastiCache Redis)]
-    SVC <--> K[[MSK Kafka<br/>outbox events]]
-    K --> EB[EventBridge] --> L[Lambda: ticket PDF]
-    EB --> SF[Step Functions: refunds]
-```
+![Seatly target AWS architecture (20 Nov 2026)](docs/architecture/Seatly-v1.drawio.png)
+
+*Target AWS architecture — see the editable [Draw.io source](docs/architecture/Seatly-v1.drawio).*
+
+- **Edge:** Route 53 and ACM route users to CloudFront, AWS WAF, Shield and the private S3 React application. `/api/*` requests pass through CloudFront to an ALB and Spring Cloud Gateway.
+- **Identity and ingress:** Cognito provides Hosted UI authentication with PKCE; the gateway validates JWTs using Cognito JWKS and applies Redis-backed rate and waiting-room controls.
+- **Application:** A private-subnet EKS cluster runs nine Java services, plus the NestJS notification service and FastAPI analytics service. REST and SQL are synchronous; Kafka carries asynchronous state changes.
+- **Data:** RDS PostgreSQL uses a schema and database user per service, ElastiCache Redis stores holds and caches, OpenSearch provides event search, and an RDS read replica supports analytics experiments.
+- **Events:** A transactional outbox relay publishes changes through Debezium on MSK Connect into Amazon MSK. EventBridge Pipes sends selected events to serverless workflows.
+- **Serverless:** Lambda generates ticket PDFs in S3 with CloudFront signed URLs and a DLQ. Step Functions runs refund workflows; an S3 and Athena analytics lake receives aggregated data.
+- **Platform and delivery:** GitLab CI uses OIDC to publish signed images to ECR and Argo CD deploys GitOps releases. EKS includes Argo Rollouts, External Secrets, Kyverno, Karpenter, Velero, Prometheus, Grafana and OpenTelemetry.
 
 See [docs/architecture/system-design.md](docs/architecture/system-design.md) for the full design.
 

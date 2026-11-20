@@ -86,11 +86,25 @@ microservice and platform phases.
 
 ## Architecture
 
-See the [system context](c4/context.md) and [container](c4/containers.md) diagrams.
+![Seatly target AWS architecture (20 Nov 2026)](Seatly-v1.drawio.png)
 
-The browser loads the React app from CloudFront and sends API calls through the ALB to Spring Cloud
-Gateway, which checks the Cognito JWT. Services talk over REST for commands and Kafka for state
-changes; Lambda and Step Functions sit outside EKS, triggered through EventBridge.
+The [editable Draw.io diagram](Seatly-v1.drawio), [system context](c4/context.md), and
+[container view](c4/containers.md) show the deployable design.
+
+The browser loads the React app from private S3 through CloudFront and sends API calls through an
+ALB to Spring Cloud Gateway. The gateway validates Cognito JWTs with JWKS and uses Redis for rate,
+waiting-room, hold and availability controls. Nine Java services run in the private EKS subnets with
+Node.js notification and Python analytics services.
+
+RDS PostgreSQL gives each service a separate schema and database identity. ElastiCache Redis, Amazon
+MSK and OpenSearch provide low-latency state, event streaming and search read models. An outbox relay
+poller advances to Debezium on MSK Connect for change-data capture, and MSK publishes state changes
+for notifications, analytics and search.
+
+EventBridge Pipes bridges selected Kafka events to serverless workflows: Lambda generates ticket PDFs
+and stores them in S3, while Step Functions compensates cancelled events through refund workflows.
+GitLab CI publishes signed images to ECR through OIDC, Argo CD handles GitOps delivery, and EKS
+platform add-ons provide observability, policy, autoscaling and disaster recovery.
 
 ## Services
 
